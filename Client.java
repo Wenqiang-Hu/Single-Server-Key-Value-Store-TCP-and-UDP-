@@ -1,6 +1,8 @@
-package code;
+
 import java.io.*;
 import java.net.*;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 /*
  * Client class can talk to either TCP or UDP server.
@@ -16,11 +18,14 @@ public class Client {
     private int port;
     private String protocol;
     private static final int TIMEOUT = 5000; // 5 seconds
+    private SimpleDateFormat sdf;
 
     public Client(String host, int port, String protocol) {
         this.host = host;
         this.port = port;
         this.protocol = protocol;
+        // timestamp format 
+        this.sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS");
     }
 
     // Send a generic request
@@ -45,7 +50,8 @@ public class Client {
 
             try {
                 String response = in.readLine(); // Attempt to read response
-                System.out.println("Response: " + response);
+                String timestamp = sdf.format(new Date(System.currentTimeMillis()));
+                System.out.println(timestamp + " - Response: " + response);
             } catch (SocketTimeoutException e) {
                 System.out.println("TCP request timed out after 5 seconds");
             }
@@ -67,7 +73,8 @@ public class Client {
             try {
                 socket.receive(responsePacket); // Attempt to receive response
                 String response = new String(responsePacket.getData(), 0, responsePacket.getLength());
-                System.out.println("Response: " + response);
+                String timestamp = sdf.format(new Date(System.currentTimeMillis()));
+                System.out.println(timestamp + " - Response: " + response);
             } catch (SocketTimeoutException e) {
                 System.out.println("UDP request timed out after 5 seconds");
             }
