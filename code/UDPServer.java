@@ -1,22 +1,23 @@
+package code;
 import java.io.*;
 import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 /*
- * TCP server uses self-defined keyValueStore(hashmap) to store
+ * UDP server uses self-defined keyValueStore(hashmap) to store
  * values.
  * 
  * Once the server is initiated, it will listen on defined port number.
  * 
  */
-public class TCPServer {
+public class UDPServer {
     private KeyValueStore kvStore;
     // server will listen on the port number
-    private int port; 
+    private int port;
     private SimpleDateFormat sdf;
 
-    public TCPServer(int port) {
+    public UDPServer(int port) {
         this.port = port;
         this.kvStore = new KeyValueStore();
         // timestamp format 
@@ -24,36 +25,39 @@ public class TCPServer {
     }
 
     public void start() {
-        try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("TCP Server listening on port " + port);
+        try (DatagramSocket socket = new DatagramSocket(port)) {
+            System.out.println("UDP Server listening on port " + port);
+            byte[] buffer = new byte[1024];
+
             while (true) {
-                try (Socket clientSocket = serverSocket.accept()) {
-                    BufferedReader in = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
-                    PrintWriter out = new PrintWriter(clientSocket.getOutputStream(), true);
+                DatagramPacket requestPacket = new DatagramPacket(buffer, buffer.length);
+                socket.receive(requestPacket);
 
-                    String request = in.readLine();
-                    // the server will process the request 
-                    String response = processRequest(request);
+                String request = new String(requestPacket.getData(), 0, requestPacket.getLength());
+                String response = processRequest(request);
 
-                    // Logging the request and response with timestamp and client info
-                    logRequest(clientSocket.getInetAddress(), clientSocket.getPort(), request, response);
+                // Logging the request and response with timestamp and client info
+                logRequest(requestPacket.getAddress(), requestPacket.getPort(), request, response);
 
-                    out.println(response);
-                }
+                byte[] responseData = response.getBytes();
+                DatagramPacket responsePacket = new DatagramPacket(
+                    responseData, responseData.length, requestPacket.getAddress(), requestPacket.getPort()
+                );
+                socket.send(responsePacket);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    // tcp server will persume desired command 
+    // UDP server will persume desired command 
     private String processRequest(String request) {
         String[] parts = request.split(" ", 3);
         String command = parts[0];
         String key = parts.length > 1 ? parts[1] : null;
         String value = parts.length > 2 ? parts[2] : null;
-        
-        // the tcp server supports three operations (PUT, GET, DELETE) 
+
+        // UDP server supports three operations (PUT, GET, DELETE) 
         switch (command.toUpperCase()) {
             case "PUT":
                 return kvStore.put(key, value);
@@ -75,11 +79,11 @@ public class TCPServer {
 
     public static void main(String[] args) {
         if (args.length != 1) {
-            System.out.println("Usage: java TCPServer.java <port>");
+            System.out.println("Usage: java UDPServer.java <port>");
             return;
         }
         int port = Integer.parseInt(args[0]);
-        TCPServer server = new TCPServer(port);
+        UDPServer server = new UDPServer(port);
         server.start();
     }
 }
